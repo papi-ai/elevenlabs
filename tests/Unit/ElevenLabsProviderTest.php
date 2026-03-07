@@ -132,11 +132,11 @@ describe('ElevenLabsProvider', function () {
                 ->toThrow(\RuntimeException::class, 'ElevenLabs API request failed:');
         });
 
-        it('throws RuntimeException on HTTP 401 error', function () {
+        it('throws AuthenticationException on HTTP 401 error', function () {
             $provider = new RealRequestElevenLabsProvider('invalid-key');
 
             expect(fn () => $provider->callRequest('https://api.elevenlabs.io/v1/text-to-speech/test', ['text' => 'test']))
-                ->toThrow(\RuntimeException::class, 'ElevenLabs API error');
+                ->toThrow(\PapiAI\Core\Exception\AuthenticationException::class);
         });
     });
 

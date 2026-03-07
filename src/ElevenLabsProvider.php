@@ -16,6 +16,9 @@ namespace PapiAI\ElevenLabs;
 
 use PapiAI\Core\AudioResponse;
 use PapiAI\Core\Contracts\TextToSpeechProviderInterface;
+use PapiAI\Core\Exception\AuthenticationException;
+use PapiAI\Core\Exception\ProviderException;
+use PapiAI\Core\Exception\RateLimitException;
 use RuntimeException;
 
 class ElevenLabsProvider implements TextToSpeechProviderInterface
@@ -112,10 +115,44 @@ class ElevenLabsProvider implements TextToSpeechProviderInterface
 
         if ($httpCode >= 400) {
             $data = json_decode($response, true);
-            $errorMessage = is_array($data) ? ($data['detail']['message'] ?? $data['detail'] ?? 'Unknown error') : 'Unknown error';
-            throw new RuntimeException("ElevenLabs API error ({$httpCode}): {$errorMessage}");
+            $this->throwForStatusCode($httpCode, is_array($data) ? $data : null);
         }
 
         return $response;
+    }
+
+    /**
+     * Throw the appropriate exception based on HTTP status code.
+     *
+     * @throws AuthenticationException
+     * @throws RateLimitException
+     * @throws ProviderException
+     */
+    private function throwForStatusCode(int $httpCode, ?array $data): never
+    {
+        $errorMessage = is_array($data) ? ($data['detail']['message'] ?? $data['detail'] ?? 'Unknown error') : 'Unknown error';
+
+        if ($httpCode === 401) {
+            throw new AuthenticationException(
+                $this->getName(),
+                $httpCode,
+                $data,
+            );
+        }
+
+        if ($httpCode === 429) {
+            throw new RateLimitException(
+                $this->getName(),
+                statusCode: $httpCode,
+                responseBody: $data,
+            );
+        }
+
+        throw new ProviderException(
+            "ElevenLabs API error ({$httpCode}): {$errorMessage}",
+            $this->getName(),
+            $httpCode,
+            $data,
+        );
     }
 }
