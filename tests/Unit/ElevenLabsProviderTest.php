@@ -61,8 +61,9 @@ describe('ElevenLabsProvider', function () {
             expect($this->provider)->not->toBeInstanceOf(\PapiAI\Core\Contracts\ProviderInterface::class);
         });
 
-        it('returns elevenlabs as the provider name', function () {
-            expect($this->provider->getName())->toBe('elevenlabs');
+        it('does not expose getName publicly', function () {
+            $reflection = new \ReflectionMethod($this->provider, 'getName');
+            expect($reflection->isPrivate())->toBeTrue();
         });
     });
 

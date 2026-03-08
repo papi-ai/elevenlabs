@@ -21,6 +21,16 @@ use PapiAI\Core\Exception\ProviderException;
 use PapiAI\Core\Exception\RateLimitException;
 use RuntimeException;
 
+/**
+ * ElevenLabs API provider for PapiAI.
+ *
+ * Bridges PapiAI's core types (AudioResponse) with the ElevenLabs Text-to-Speech API,
+ * handling format conversion. Supports text-to-speech synthesis with multiple voices
+ * and configurable audio output formats. Authentication via xi-api-key header.
+ * All HTTP via ext-curl.
+ *
+ * @see https://elevenlabs.io/docs/api-reference
+ */
 class ElevenLabsProvider implements TextToSpeechProviderInterface
 {
     private const API_BASE = 'https://api.elevenlabs.io/v1';
@@ -37,6 +47,11 @@ class ElevenLabsProvider implements TextToSpeechProviderInterface
         'Sam' => 'yoZ06aMxZJJ28mfd3POQ',
     ];
 
+    /**
+     * @param string $apiKey       ElevenLabs API key for authentication
+     * @param string $defaultVoice Default voice name or ID (defaults to 'Rachel')
+     * @param string $defaultModel Default TTS model (defaults to 'eleven_multilingual_v2')
+     */
     public function __construct(
         private readonly string $apiKey,
         private readonly string $defaultVoice = 'Rachel',
@@ -44,6 +59,19 @@ class ElevenLabsProvider implements TextToSpeechProviderInterface
     ) {
     }
 
+    /**
+     * Synthesize text into audio using the ElevenLabs TTS API.
+     *
+     * @param string               $text    The text to convert to speech
+     * @param array<string, mixed> $options Optional settings: 'voice', 'model', 'format'
+     *
+     * @return AudioResponse The generated audio data with format and model metadata
+     *
+     * @throws RuntimeException        If the API request fails
+     * @throws AuthenticationException If the API key is invalid
+     * @throws RateLimitException      If the rate limit is exceeded
+     * @throws ProviderException       If the API returns an error
+     */
     public function synthesize(string $text, array $options = []): AudioResponse
     {
         $voice = $options['voice'] ?? $this->defaultVoice;
@@ -67,7 +95,10 @@ class ElevenLabsProvider implements TextToSpeechProviderInterface
         );
     }
 
-    public function getName(): string
+    /**
+     * Return the provider identifier for error reporting.
+     */
+    private function getName(): string
     {
         return 'elevenlabs';
     }
@@ -83,7 +114,17 @@ class ElevenLabsProvider implements TextToSpeechProviderInterface
     }
 
     /**
-     * Make an API request to the ElevenLabs API.
+     * Make a POST request to the ElevenLabs API.
+     *
+     * @param string               $url     The full API endpoint URL
+     * @param array<string, mixed> $payload The JSON request body
+     *
+     * @return string The raw response body
+     *
+     * @throws RuntimeException        If the cURL request fails or returns no response
+     * @throws AuthenticationException If the API key is invalid (HTTP 401)
+     * @throws RateLimitException      If the rate limit is exceeded (HTTP 429)
+     * @throws ProviderException       If the API returns any other error
      */
     protected function request(string $url, array $payload): string
     {
